@@ -1,6 +1,8 @@
 # coding = utf-8
 
 import os, re, sys, random, urllib.parse
+from pythainlp.tokenize import word_tokenize
+
 from collections import defaultdict
 
 def WriteLine(fout, lst):
@@ -115,17 +117,23 @@ def RemoveDupRows(file, fobj='*'):
 			
 def LoadCSV(fn):
 	ret = []
-	with open(fn, encoding='utf-8') as fin:
+	with open(fn, encoding='utf8') as fin:
+		sentence_pairs = []
 		for line in fin:
-			lln = line.rstrip('\r\n').split('\t')
-			ret.append(lln)
+			sentence_pairs.append(line.replace('\n', ''))
+			if(len(sentence_pairs) == 2):
+				ret.append(sentence_pairs)
+				sentence_pairs = sentence_pairs[1:]
 	return ret
 
 def LoadCSVg(fn):
 	with open(fn, encoding='utf-8') as fin:
+		sentence_pairs = []
 		for line in fin:
-			lln = line.rstrip('\r\n').split('\t')
-			yield lln
+			sentence_pairs.append(line.replace('\n', ''))
+			if(len(sentence_pairs) == 2):
+				yield sentence_pairs
+				sentence_pairs = sentence_pairs[1:]
 
 def SaveCSV(csv, fn):
 	with open(fn, 'w', encoding='utf-8') as fout:

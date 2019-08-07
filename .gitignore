@@ -5,4 +5,5 @@ data/pinyin.corpus.txt
 data/pinyin_word.txt
 univ_transformer.py
 hexconv_main.py
+all_subtitle_sentence.txt
 .vs/

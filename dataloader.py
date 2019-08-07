@@ -2,6 +2,8 @@ import os, sys, time, random
 import ljqpy
 import h5py
 import numpy as np
+from pythainlp.tokenize import word_tokenize
+from tqdm import tqdm
 
 class TokenList:
 	def __init__(self, token_list):
@@ -33,18 +35,18 @@ def MakeS2SDict(fn=None, min_freq=5, delimiter=' ', dict_file=None):
 		otokens = TokenList(lst[midpos+1:])
 		return itokens, otokens
 	data = ljqpy.LoadCSV(fn)
-	wdicts = [{}, {}]
-	for ss in data:
-		for seq, wd in zip(ss, wdicts):
-			for w in seq.split(delimiter): 
-				wd[w] = wd.get(w, 0) + 1
+	token_dict = {}
+	for pairs in tqdm(data):
+		for token in word_tokenize(pairs[0],engine='deepcut') + word_tokenize(pairs[1],engine='deepcut'):
+			if token not in token_dict:
+				token_dict[token] = len(token_dict)
+	wdicts = [token_dict, token_dict]
 	wlists = []
 	for wd in wdicts:	
 		wd = ljqpy.FreqDict2List(wd)
 		wlist = [x for x,y in wd if y >= min_freq]
 		wlists.append(wlist)
-	print('seq 1 words:', len(wlists[0]))
-	print('seq 2 words:', len(wlists[1]))
+	print('seq 1 words:', len(wlists))
 	itokens = TokenList(wlists[0])
 	otokens = TokenList(wlists[1])
 	if dict_file is not None:
@@ -61,7 +63,7 @@ def MakeS2SData(fn=None, itokens=None, otokens=None, delimiter=' ', h5_file=None
 	Xs = [[], []]
 	for ss in data:
 		for seq, xs in zip(ss, Xs):
-			xs.append(list(seq.split(delimiter)))
+			xs.append(list(word_tokenize(seq,engine='deepcut')))
 	X, Y = pad_to_longest(Xs[0], itokens, max_len), pad_to_longest(Xs[1], otokens, max_len)
 	if h5_file is not None:
 		with h5py.File(h5_file, 'w') as dfile:

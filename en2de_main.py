@@ -2,10 +2,11 @@ import os, sys
 import dataloader as dd
 from keras.optimizers import *
 from keras.callbacks import *
+import tensorflow as tf
 
-itokens, otokens = dd.MakeS2SDict('data/en2de.s2s.txt', dict_file='data/en2de_word.txt')
-Xtrain, Ytrain = dd.MakeS2SData('data/en2de.s2s.txt', itokens, otokens, h5_file='data/en2de.h5')
-Xvalid, Yvalid = dd.MakeS2SData('data/en2de.s2s.valid.txt', itokens, otokens, h5_file='data/en2de.valid.h5')
+itokens, otokens = dd.MakeS2SDict('mini.txt')
+Xtrain, Ytrain = dd.MakeS2SData('mini.txt', itokens, otokens)
+Xvalid, Yvalid = dd.MakeS2SData('mini.txt', itokens, otokens)
 
 print('seq 1 words:', itokens.num())
 print('seq 2 words:', otokens.num())
@@ -25,12 +26,13 @@ d_model = 256
 s2s = Transformer(itokens, otokens, len_limit=70, d_model=d_model, d_inner_hid=512, \
 				   n_head=8, layers=2, dropout=0.1)
 
-mfile = 'models/en2de.model.h5'
+mfile = ''
 
 lr_scheduler = LRSchedulerPerStep(d_model, 4000) 
-model_saver = ModelCheckpoint(mfile, save_best_only=True, save_weights_only=True)
+model_saver = ModelCheckpoint('./checkpoint.h5', save_best_only=True, save_weights_only=True)
 
-s2s.compile(Adam(0.001, 0.9, 0.98, epsilon=1e-9))
+with tf.device('/cpu:0'):
+	s2s.compile(Adam(0.001, 0.9, 0.98, epsilon=1e-9))
 try: s2s.model.load_weights(mfile)
 except: print('\n\nnew model')
 
@@ -61,7 +63,8 @@ elif 'test' in sys.argv:
 	for x in rets[:5]: print(x)
 else:
 	s2s.model.summary()
-	s2s.model.fit([Xtrain, Ytrain], None, batch_size=64, epochs=30, \
-				validation_data=([Xvalid, Yvalid], None), \
-				callbacks=[lr_scheduler, model_saver])
+	with tf.device('/gpu:0'):
+		s2s.model.fit([Xtrain, Ytrain], None, batch_size=64, epochs=30, \
+					validation_data=([Xvalid, Yvalid], None), \
+					callbacks=[lr_scheduler, model_saver])
 	# val_accu @ 30 epoch: 0.7045
